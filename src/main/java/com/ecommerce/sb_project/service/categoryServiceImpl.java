@@ -3,78 +3,63 @@ package com.ecommerce.sb_project.service;
 import com.ecommerce.sb_project.excpetion.APIException;
 import com.ecommerce.sb_project.excpetion.ResourceNotFoundException;
 import com.ecommerce.sb_project.model.Category;
+import com.ecommerce.sb_project.payLoad.categoryDTO;
 import com.ecommerce.sb_project.payLoad.categoryResponse;
 import com.ecommerce.sb_project.repos.categoryRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class categoryServiceImpl implements categoryService {
 
-    public long nextId;
-
-//    private final List<Category> categories = new ArrayList<>();
     private final categoryRepository categoryRepository;
-//    @Autowired
-//    private ModelMapper;
-    
+    private final ModelMapper modelMapper;
 
-    public categoryServiceImpl(com.ecommerce.sb_project.repos.categoryRepository categoryRepository) {
+    @Autowired
+    public categoryServiceImpl(categoryRepository categoryRepository, ModelMapper modelMapper) {
         this.categoryRepository = categoryRepository;
+        this.modelMapper = modelMapper;
     }
-
 
     @Override
     public categoryResponse getCategories() {
-        categoryResponse ls = categoryRepository.findAll();
-        if (ls.isEmpty()) {
-            throw new APIException("No category created t ill now");
+        List<Category> categories = categoryRepository.findAll();
+        if (categories.isEmpty()) {
+            throw new APIException("No categories found.");
         }
-        return ls;
-    }
-//        if()
-//        return categoryRepository.findAll();
-//    }
 
+        List<categoryDTO> categoryDTOs = categories.stream()
+                .map(category -> modelMapper.map(category, categoryDTO.class))
+                .collect(Collectors.toList());
+
+        return new categoryResponse(categoryDTOs);
+    }
 
     @Override
     public void createCategory(Category category) {
-        Category savedCategory=categoryRepository.findByCategoryName(category.getCategoryName());
-        if (savedCategory!=null){
-            throw new APIException("Category with"+category.getCategoryName()+"Already Exist");
+        if (categoryRepository.findByCategoryName(category.getCategoryName()) != null) {
+            throw new APIException("Category with name '" + category.getCategoryName() + "' already exists.");
         }
-        category.setCategoryId(nextId++);
         categoryRepository.save(category);
     }
 
     @Override
     public String deleteCategory(long categoryId) {
-        Object httpStatus;
-        List<Category> categories=categoryRepository.findAll();
-        Category category = categories.stream().filter(c->c.getCategoryId().equals(categoryId)).
-                findFirst()
-                .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Resource Not Found"));
-//        if category == null
-//                return "not found";
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "ID", categoryId));
         categoryRepository.delete(category);
-        return "Deleted Succesfully";
+        return "Category deleted successfully.";
     }
 
     @Override
     public void updateCategory(Category category, Long categoryId) {
         Category categoryToUpdate = categoryRepository.findById(categoryId)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource Not Found"));
-                .orElseThrow(() -> new ResourceNotFoundException("Category","categoryID",categoryId));
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "ID", categoryId));
         categoryToUpdate.setCategoryName(category.getCategoryName());
         categoryRepository.save(categoryToUpdate);
     }
-
-
 }
