@@ -29,7 +29,7 @@ public class CategoryController {
         return categoryService.getCategories(pageNumber, pageSize, sortBy, sortDir);
     }
 
-    @PostMapping("api/public/categories")
+    @PostMapping("api/public/addcategory")
     public ResponseEntity<String> createCategory(@Valid @RequestBody categoryDTO categoryDTO) {
         categoryService.createCategory(categoryDTO);
         return new ResponseEntity<>("Category Added Successfully", HttpStatus.CREATED);
